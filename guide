@@ -20,7 +20,7 @@ ping -c3 gnu.org
 # format and partition disk
 sgdisk -Z /dev/sda
 gdisk /dev/sda
-# make 2 partitions, nº1 512M named ESP and mark it as "EFI System" type (ef00) and nº2 rest of the disk named cryptlvm and mark it as Linux dm-crypt (8308)
+# make 2 partitions, nº1 512M named ESP and mark it as "EFI System" type (ef00) and nº2 rest of the disk named cryptlvm and mark it as "Linux dm-crypt" (8308)
 # the ESP partiton size can be as low as 256M if not on nvidia
 # make the ESP partition 1G if you plan on using multiple different kernels
 partprobe -s /dev/sda
