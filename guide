@@ -96,6 +96,9 @@ vim /etc/hosts
 	::1             localhost
  	127.0.1.1       arch.localdomain arch
 systemctl enable iwd systemd-networkd systemd-resolved systemd-timesyncd
+rm /etc/resolv.conf
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+
 # configure iwd
 vim /etc/iwd/main.conf
   [General]
