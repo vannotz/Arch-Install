@@ -49,7 +49,7 @@ swapon /dev/vg/swap
 
 # updating mirrors and pacstrapping
 reflector --country BR --age 24 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
-pacstrap -K /mnt base base-devel linux-zen linux-zen-firmware intel-ucode cryptsetup lvm2 vim git iwd
+pacstrap -K /mnt base base-devel linux-zen linux-zen-firmware intel-ucode cryptsetup lvm2 vim git iwd sbctl
 # intel-ucode if on intel, amd-ucode if on amd
 # iwd is needed for wireless network
 
@@ -114,10 +114,8 @@ vim /etc/systemd/network/wifi.network
   IPv6PrivacyExtensions=true
 # configure resolved with DoT and DNSSEC enabled
 vim /etc/systemd/resolved.conf
-  DNS=1.1.1.1#cloudflare-dns.com 1.0.0.1#cloudflare-dns.com 2606:4700:4700::1111#cloudfla
-re-dns.com 2606:4700:4700::1001#cloudflare-dns.com
-  FallbackDNS=9.9.9.9#dns.quad9.net 149.112.112.112#dns.quad9.net 2620:fe::fe#dns.quad9.n
-et 2620:fe::9#dns.quad9.net
+  DNS=1.1.1.1#cloudflare-dns.com 1.0.0.1#cloudflare-dns.com 2606:4700:4700::1111#cloudflare-dns.com 2606:4700:4700::1001#cloudflare-dns.com
+  FallbackDNS=9.9.9.9#dns.quad9.net 149.112.112.112#dns.quad9.net 2620:fe::fe#dns.quad9.net 2620:fe::9#dns.quad9.net
   DNSSEC=yes
   DNSOverTLS=yes
   MulticastDNS=no
@@ -125,8 +123,7 @@ et 2620:fe::9#dns.quad9.net
 vim /etc/systemd/timesyncd.conf.d/local.conf
   [Time]
   NTP=0.br.pool.ntp.org 1.br.pool.ntp.org 2.br.pool.ntp.org 3.br.pool.ntp.org
-  FallbackNTP=0.arch.pool.ntp.org 1.arch.pool.ntp.org 2.arch.pool.ntp.org 3.arch.pool.ntp
-.org
+  FallbackNTP=0.arch.pool.ntp.org 1.arch.pool.ntp.org 2.arch.pool.ntp.org 3.arch.pool.ntp.org
 
 # modify mkinitcpio for encryption support
 vim /etc/mkinitcpio.conf
