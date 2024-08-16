@@ -1,0 +1,180 @@
+# load your keymap if needed, mine is br-abnt2 
+loadkeys br-abnt2
+
+# rfkill may block wifi
+rfkill unblock wifi
+
+# your wifi card may be disabled
+ip link set wlan0 up
+
+# connect to wireless internet
+iwctl
+  station wlan0 scan
+  station wlan0 get-networks
+  station wlan0 connect XXXXXXX
+  exit
+# check connection
+ping -c3 gnu.org
+
+# check the install disk with lsblk, will be using /dev/sda
+# format and partition disk
+sgdisk -Z /dev/sda
+gdisk /dev/sda
+# make 2 partitions, nº1 512M named ESP and mark it as "EFI System" type (ef00) and nº2 rest of the disk named cryptlvm and mark it as Linux dm-crypt (8308)
+# the ESP partiton size can be as low as 256M if not on nvidia
+# make the ESP partition 1G if you plan on using multiple different kernels
+partprobe -s /dev/sda
+
+# format partitions (UEFI)
+mkfs.fat -F32 -n ESP /dev/sda1 <- ESP partition
+cryptsetup -s 512 -h sha512 -i 5000 luksFormat /dev/sda2 <- CRYPT partition
+cryptsetup luksOpen /dev/sda2 cryptlvm
+
+# Create LVM
+pvcreate /dev/mapper/cryptlvm
+vgcreate vg /dev/mapper/cryptlvm
+lvcreate --size xG vg --name swap
+# x = the size of your swap partition, a value between 101% and 200% of your total ram size is recommended
+lvcreate -l +100%FREE vg --name root
+# I don't much care for creating a separate home partition
+mkfs.ext4 -L ROOT /dev/vg/root
+mkswap -L SWAP /dev/vg/swap
+
+# mount partitions and turn on swap
+# MOUNT ROOT BEFORE MOUNTING BOOT!
+mount /dev/vg/root /mnt
+mkdir /mnt/efi
+mount /dev/sda1 /mnt/efi
+swapon /dev/vg/swap
+
+# updating mirrors and pacstrapping
+reflector --country BR --age 24 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
+pacstrap -K /mnt base base-devel linux-zen linux-zen-firmware intel-ucode cryptsetup lvm2 vim git iwd
+# intel-ucode if on intel, amd-ucode if on amd
+# iwd is needed for wireless network
+
+
+## Post-Basestrap 
+# generate fstab
+genfstab -U /mnt >> /mnt/etc/fstab
+
+# chroot into system
+arch-chroot /mnt bash
+
+# configure clock
+ln -sf /usr/share/zoneinfo/Region/City /etc/localtime
+hwclock --systohc
+
+# choose and set locale
+# uncomment desired locale, usually en_US.UTF-8
+vim /etc/locale.gen
+# generate locale 
+locale-gen
+# set locale systemwide
+vim /etc/locale.conf
+	export LANG="en_US.UTF-8"
+	export LC_COLLATE="C"
+
+# add user and add to wheel group
+# $USER = your user
+useradd -mG wheel $USER
+
+# configure wheel group
+EDITOR=vim visudo
+# uncomment %wheel ALL=(ALL:ALL) ALL
+
+# configure passwords
+passwd
+passwd $USER
+
+# network config
+# will be using 'artix' as the hostname, change to your liking
+vim /etc/hostname
+	artix
+vim /etc/hosts
+	127.0.0.1	      localhost
+	::1             localhost
+ 	127.0.1.1       arch.localdomain arch
+systemctl enable iwd systemd-networkd systemd-resolved systemd-timesyncd
+# configure iwd
+vim /etc/iwd/main.conf
+  [General]
+  use_default_interface=true
+  AddressRandomization=network
+  AddressRandomizationRange=full
+# configure networkd
+vim /etc/systemd/network/wifi.network
+  [Match]
+  Name=wlan0
+  [Network]
+  DHCP=yes
+  IPv6PrivacyExtensions=true
+# configure resolved with DoT and DNSSEC enabled
+vim /etc/systemd/resolved.conf
+  DNS=1.1.1.1#cloudflare-dns.com 1.0.0.1#cloudflare-dns.com 2606:4700:4700::1111#cloudfla
+re-dns.com 2606:4700:4700::1001#cloudflare-dns.com
+  FallbackDNS=9.9.9.9#dns.quad9.net 149.112.112.112#dns.quad9.net 2620:fe::fe#dns.quad9.n
+et 2620:fe::9#dns.quad9.net
+  DNSSEC=yes
+  DNSOverTLS=yes
+  MulticastDNS=no
+# configure timesyncd with brazilian servers
+vim /etc/systemd/timesyncd.conf.d/local.conf
+  [Time]
+  NTP=0.br.pool.ntp.org 1.br.pool.ntp.org 2.br.pool.ntp.org 3.br.pool.ntp.org
+  FallbackNTP=0.arch.pool.ntp.org 1.arch.pool.ntp.org 2.arch.pool.ntp.org 3.arch.pool.ntp
+.org
+# modify mkinitcpio for encryption support
+vim /etc/mkinitcpio.conf
+# add ext4 to MODULES=()
+# change udev to systemd in HOOKS=
+# change keymap and consolefont to sd-vconsole in HOOKS=
+# add sd-encrypt lvm2 to HOOKS=() before filesystems
+# uncomment COMPRESSION="lz4" for a slightly faster boot time in exchange for a slightly bigger initial ramdisk
+# generate initial ramdisk
+vim /etc/mkinitcpio.d/linux-zen.preset
+# uncomment ALL_config="/etc/mkinitcpio.conf" and all UKI related lines
+# comment out all "image" related lines
+# make kernel cmdline and path to .efi
+mkdir -p /efi/EFI/Linux
+vim /etc/kernel/cmdline
+  rd.luks.name=$UUID=cryptlvm rd.luks.options=discard root=UUID=$UUID resume=UUID=$UUID rw quiet
+# add desired kernel parameters after rw, separate with spaces ( mitigations=off nowatchdog quiet ...)
+# my kernel parameters, for reference
+rw quiet zswap.compressor=lz4 sysctl.vm.swappiness=10 nowatchdog module_blacklist=nouveau,pcspkr,iTCO_wdt,bluetooth,btusb
+# you may also remove any mentions to initramfs from boot
+
+# enable secure boot support
+sbctl create-keys
+sbctl enroll-keys -m
+sbctl sign -s -o /usr/lib/systemd/boot/efi/linuxx64.efi.stub.signed /usr/lib/systemd/boot/efi/linuxx64.efi.stub
+sbctl sign -s /efi/EFI/Linux/arch-linux-zen.efi
+sbctl sign -s /efi/EFI/Linux/arch-linux-zen-fallback.efi
+# this should automatically remake the UKI
+
+## Personal Post-Install Basic Needs
+# install packages needed to build suckless software and start an xorg server
+pacman -S libx11 libxft libxinerama xorg-server xf86-video-intel intel-media-driver sx
+
+# configure keyboard layout for the tty
+vim /etc/vconsole.conf
+	KEYMAP=br-abnt2
+# configure keyboard layout for xorg
+vim /etc/X11/xorg.conf.d/00-keyboard.conf
+	Section "InputClass"
+		Identifier "keyboard layout"
+		MatchIsKeyboard "yes"
+		Option "XkbLayout" "br"
+		Option "XkbVariant" "abnt2"
+	EndSection
+
+# exit and sync before poweroff
+exit
+sync
+poweroff
+
+## Chrooting into an encrypted system with volume groups if needed
+cryptsetup luksOpen /dev/sda2 cryptlvm
+vgchange -ay
+mount /dev/vg/root /mnt
+mount /dev/sda1 /mnt/efi
