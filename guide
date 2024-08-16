@@ -124,6 +124,7 @@ vim /etc/systemd/timesyncd.conf.d/local.conf
   NTP=0.br.pool.ntp.org 1.br.pool.ntp.org 2.br.pool.ntp.org 3.br.pool.ntp.org
   FallbackNTP=0.arch.pool.ntp.org 1.arch.pool.ntp.org 2.arch.pool.ntp.org 3.arch.pool.ntp
 .org
+
 # modify mkinitcpio for encryption support
 vim /etc/mkinitcpio.conf
 # add ext4 to MODULES=()
@@ -151,6 +152,9 @@ sbctl sign -s -o /usr/lib/systemd/boot/efi/linuxx64.efi.stub.signed /usr/lib/sys
 sbctl sign -s /efi/EFI/Linux/arch-linux-zen.efi
 sbctl sign -s /efi/EFI/Linux/arch-linux-zen-fallback.efi
 # this should automatically remake the UKI
+
+# make bootable
+bootctl install --esp-path=/efi
 
 ## Personal Post-Install Basic Needs
 # install packages needed to build suckless software and start an xorg server
