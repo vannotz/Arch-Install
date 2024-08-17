@@ -92,7 +92,7 @@ passwd $USER
 vim /etc/hostname
 	artix
 vim /etc/hosts
-	127.0.0.1	      localhost
+	127.0.0.1	localhost
 	::1             localhost
  	127.0.1.1       arch.localdomain arch
 systemctl enable iwd systemd-networkd systemd-resolved systemd-timesyncd
@@ -101,29 +101,29 @@ ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
 # configure iwd
 vim /etc/iwd/main.conf
-  [General]
-  use_default_interface=true
-  AddressRandomization=network
-  AddressRandomizationRange=full
+	[General]
+	use_default_interface=true
+	AddressRandomization=network
+	AddressRandomizationRange=full
 # configure networkd
 vim /etc/systemd/network/wifi.network
-  [Match]
-  Name=wlan0
-  [Network]
-  DHCP=yes
-  IPv6PrivacyExtensions=true
+	[Match]
+	Name=wlan0
+	[Network]
+	DHCP=yes
+	IPv6PrivacyExtensions=true
 # configure resolved with DoT and DNSSEC enabled
 vim /etc/systemd/resolved.conf
-  DNS=1.1.1.1#cloudflare-dns.com 1.0.0.1#cloudflare-dns.com 2606:4700:4700::1111#cloudflare-dns.com 2606:4700:4700::1001#cloudflare-dns.com
-  FallbackDNS=9.9.9.9#dns.quad9.net 149.112.112.112#dns.quad9.net 2620:fe::fe#dns.quad9.net 2620:fe::9#dns.quad9.net
-  DNSSEC=yes
-  DNSOverTLS=yes
-  MulticastDNS=no
+	DNS=1.1.1.1#cloudflare-dns.com 1.0.0.1#cloudflare-dns.com 2606:4700:4700::1111#cloudflare-dns.com 2606:4700:4700::1001#cloudflare-dns.com
+	FallbackDNS=9.9.9.9#dns.quad9.net 149.112.112.112#dns.quad9.net 2620:fe::fe#dns.quad9.net 2620:fe::9#dns.quad9.net
+	DNSSEC=yes
+	DNSOverTLS=yes
+	MulticastDNS=no
 # configure timesyncd with brazilian servers
 vim /etc/systemd/timesyncd.conf.d/local.conf
-  [Time]
-  NTP=0.br.pool.ntp.org 1.br.pool.ntp.org 2.br.pool.ntp.org 3.br.pool.ntp.org
-  FallbackNTP=0.arch.pool.ntp.org 1.arch.pool.ntp.org 2.arch.pool.ntp.org 3.arch.pool.ntp.org
+	[Time]
+	NTP=0.br.pool.ntp.org 1.br.pool.ntp.org 2.br.pool.ntp.org 3.br.pool.ntp.org
+	FallbackNTP=0.arch.pool.ntp.org 1.arch.pool.ntp.org 2.arch.pool.ntp.org 3.arch.pool.ntp.org
 
 # modify mkinitcpio for encryption support
 vim /etc/mkinitcpio.conf
@@ -139,7 +139,7 @@ vim /etc/mkinitcpio.d/linux-zen.preset
 # make kernel cmdline and path to .efi
 mkdir -p /efi/EFI/Linux
 vim /etc/kernel/cmdline
-  rd.luks.name=$UUID=cryptlvm rd.luks.options=discard root=UUID=$UUID resume=UUID=$UUID rw quiet
+	rd.luks.name=$UUID=cryptlvm rd.luks.options=discard root=UUID=$UUID resume=UUID=$UUID rw quiet
 # add desired kernel parameters after rw, separate with spaces ( mitigations=off nowatchdog quiet ...)
 # my kernel parameters, for reference
 rw quiet zswap.compressor=lz4 sysctl.vm.swappiness=10 nowatchdog module_blacklist=nouveau,pcspkr,iTCO_wdt,bluetooth,btusb
