@@ -62,12 +62,6 @@ genfstab -U /mnt >> /mnt/etc/fstab
 # chroot into system
 arch-chroot /mnt bash
 
-# configure fstab
-vim /etc/fstab
-# change any mentions to "realatime" to "noatime" and change the values of fmask and dmask to "fmask=0137,dmask=0027"
-# the first change will lower writes to the disk at the expense of breakage of very few applications, like neomutt
-# the second change is a hardening tweak that will make the /efi directory accessible only to the root user
-
 # configure clock
 ln -sf /usr/share/zoneinfo/Region/City /etc/localtime
 hwclock --systohc
@@ -151,16 +145,9 @@ vim /etc/kernel/cmdline
 	rd.luks.name=$UUID=cryptlvm rd.luks.options=discard root=UUID=$UUID resume=UUID=$UUID rw quiet
 # add desired kernel parameters after rw, separate with spaces ( mitigations=off nowatchdog quiet ...)
 # my kernel parameters, for reference
-rw quiet zswap.compressor=lz4 sysctl.vm.swappiness=10 nowatchdog module_blacklist=nouveau,pcspkr,iTCO_wdt
+rw quiet zswap.compressor=lz4 sysctl.vm.swappiness=10 nowatchdog module_blacklist=nouveau,iTCO_wdt
 # you may also remove any mentions to initramfs from boot
-
-# enable secure boot support
-sbctl create-keys
-sbctl enroll-keys -m
-sbctl sign -s -o /usr/lib/systemd/boot/efi/linuxx64.efi.stub.signed /usr/lib/systemd/boot/efi/linuxx64.efi.stub
-sbctl sign -s /efi/EFI/Linux/arch-linux-zen.efi
-sbctl sign -s /efi/EFI/Linux/arch-linux-zen-fallback.efi
-# this should automatically remake the UKI
+mkinitcpio -P
 
 # make bootable
 bootctl install --esp-path=/efi
@@ -177,6 +164,22 @@ vim /etc/X11/xorg.conf.d/00-keyboard.conf
 		Option "XkbLayout" "br"
 		Option "XkbVariant" "abnt2"
 	EndSection
+
+# enable secure boot support
+sbctl create-keys
+sbctl enroll-keys -m
+sbctl sign -s -o /usr/lib/systemd/boot/efi/linuxx64.efi.stub.signed /usr/lib/systemd/boot/efi/linuxx64.efi.stub
+sbctl sign -s /efi/EFI/Linux/arch-linux-zen.efi
+sbctl sign -s /efi/EFI/Linux/arch-linux-zen-fallback.efi
+# make mkinitcpio and bootctl
+mkinitcpio -P
+bootctl install --esp-path=/efi
+
+# configure fstab
+vim /etc/fstab
+# change any mentions to "realatime" to "noatime" and change the values of fmask and dmask to "fmask=0137,dmask=0027"
+# the first change will lower writes to the disk at the expense of breakage of very few applications, like neomutt
+# the second change is a hardening tweak that will make the /efi directory accessible only to the root user
 
 # exit and sync before poweroff
 exit
