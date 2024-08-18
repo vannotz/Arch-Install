@@ -50,7 +50,7 @@ swapon /dev/vg/swap
 # updating mirrors and pacstrapping
 reflector -f 5 -a 24 -c BR -p https --save /etc/pacman.d/mirrorlist --verbose
 # change country codes
-pacstrap -K /mnt base base-devel linux-zen linux-zen-firmware intel-ucode cryptsetup lvm2 vim git iwd sbctl
+pacstrap -K /mnt base base-devel linux-zen linux-firmware intel-ucode cryptsetup lvm2 vim git iwd sbctl
 # intel-ucode if on intel, amd-ucode if on amd
 # iwd is needed for wireless network
 
@@ -97,8 +97,8 @@ vim /etc/hostname
 	arch
 vim /etc/hosts
 	127.0.0.1	localhost
-	::1             localhost
- 	127.0.1.1       arch.localdomain arch
+	::1		localhost
+ 	127.0.1.1	arch.localdomain arch
 # enable systemd network related services
 systemctl enable iwd systemd-networkd systemd-resolved systemd-timesyncd
 
@@ -152,6 +152,11 @@ mkinitcpio -P
 # make bootable
 bootctl install --esp-path=/efi
 
+# exit and sync before poweroff
+exit
+sync
+poweroff
+
 ## Personal Post-Install Basic Needs
 # install packages needed to build suckless software and start an xorg server
 pacman -S libx11 libxft libxinerama xorg-server xf86-video-intel intel-media-driver sx
@@ -181,10 +186,6 @@ vim /etc/fstab
 # the first change will lower writes to the disk at the expense of breakage of very few applications, like neomutt
 # the second change is a hardening tweak that will make the /efi directory accessible only to the root user
 
-# exit and sync before poweroff
-exit
-sync
-poweroff
 
 ## Chrooting into an encrypted system with volume groups if needed
 cryptsetup luksOpen /dev/sda2 cryptlvm
