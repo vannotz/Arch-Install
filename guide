@@ -48,7 +48,7 @@ mount /dev/sda1 /mnt/efi
 swapon /dev/vg/swap
 
 # updating mirrors and pacstrapping
-reflector -f 5 -a 24 -c US,BR -p https --save /etc/pacman.d/mirrorlist --verbose
+reflector -f 5 -a 24 -c BR -p https --save /etc/pacman.d/mirrorlist --verbose
 # change country codes
 pacstrap -K /mnt base base-devel linux-zen linux-zen-firmware intel-ucode cryptsetup lvm2 vim git iwd sbctl
 # intel-ucode if on intel, amd-ucode if on amd
@@ -81,6 +81,9 @@ locale-gen
 vim /etc/locale.conf
 	export LANG="en_US.UTF-8"
 	export LC_COLLATE="C"
+# configure keyboard layout for the tty
+vim /etc/vconsole.conf
+	KEYMAP=br-abnt2
 
 # add user and add to wheel group
 # $USER = your user
@@ -97,14 +100,13 @@ passwd $USER
 # network config
 # will be using 'artix' as the hostname, change to your liking
 vim /etc/hostname
-	artix
+	arch
 vim /etc/hosts
 	127.0.0.1	localhost
 	::1             localhost
  	127.0.1.1       arch.localdomain arch
+# enable systemd network related services
 systemctl enable iwd systemd-networkd systemd-resolved systemd-timesyncd
-rm /etc/resolv.conf
-ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
 # configure iwd
 vim /etc/iwd/main.conf
@@ -149,7 +151,7 @@ vim /etc/kernel/cmdline
 	rd.luks.name=$UUID=cryptlvm rd.luks.options=discard root=UUID=$UUID resume=UUID=$UUID rw quiet
 # add desired kernel parameters after rw, separate with spaces ( mitigations=off nowatchdog quiet ...)
 # my kernel parameters, for reference
-rw quiet zswap.compressor=lz4 sysctl.vm.swappiness=10 nowatchdog module_blacklist=nouveau,pcspkr,iTCO_wdt,bluetooth,btusb
+rw quiet zswap.compressor=lz4 sysctl.vm.swappiness=10 nowatchdog module_blacklist=nouveau,pcspkr,iTCO_wdt
 # you may also remove any mentions to initramfs from boot
 
 # enable secure boot support
@@ -167,9 +169,6 @@ bootctl install --esp-path=/efi
 # install packages needed to build suckless software and start an xorg server
 pacman -S libx11 libxft libxinerama xorg-server xf86-video-intel intel-media-driver sx
 
-# configure keyboard layout for the tty
-vim /etc/vconsole.conf
-	KEYMAP=br-abnt2
 # configure keyboard layout for xorg
 vim /etc/X11/xorg.conf.d/00-keyboard.conf
 	Section "InputClass"
