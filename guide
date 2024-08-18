@@ -20,7 +20,7 @@ ping -c3 gnu.org
 # format and partition disk
 sgdisk -Z /dev/sda
 gdisk /dev/sda
-# make 2 partitions, nº1 512M named ESP and mark it as "EFI System" type (ef00) and nº2 rest of the disk named cryptlvm and mark it as "Linux dm-crypt" (8308)
+# make 2 partitions, nº1 512M named ESP and mark it as "EFI System" type (ef00) and nº2 rest of the disk named LUKS and mark it as "Linux LUKS" (8309)
 # the ESP partiton size can be as low as 256M if not on nvidia
 # make the ESP partition 1G if you plan on using multiple different kernels
 partprobe -s /dev/sda
@@ -28,11 +28,11 @@ partprobe -s /dev/sda
 # format partitions (UEFI)
 mkfs.fat -F32 -n ESP /dev/sda1 <- ESP partition
 cryptsetup -s 512 -h sha512 -i 5000 luksFormat /dev/sda2 <- CRYPT partition
-cryptsetup luksOpen /dev/sda2 cryptlvm
+cryptsetup luksOpen /dev/sda2 LUKS
 
 # Create LVM
-pvcreate /dev/mapper/cryptlvm
-vgcreate vg /dev/mapper/cryptlvm
+pvcreate /dev/mapper/LUKS
+vgcreate vg /dev/mapper/LUKS
 lvcreate --size xG vg --name swap
 # x = the size of your swap partition, a value between 101% and 200% of your total ram size is recommended
 lvcreate -l +100%FREE vg --name root
@@ -48,7 +48,8 @@ mount /dev/sda1 /mnt/efi
 swapon /dev/vg/swap
 
 # updating mirrors and pacstrapping
-reflector --country BR --age 24 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
+reflector -f 5 -a 24 -c US,BR -p https --save /etc/pacman.d/mirrorlist --verbose
+# change country codes
 pacstrap -K /mnt base base-devel linux-zen linux-zen-firmware intel-ucode cryptsetup lvm2 vim git iwd sbctl
 # intel-ucode if on intel, amd-ucode if on amd
 # iwd is needed for wireless network
@@ -60,6 +61,12 @@ genfstab -U /mnt >> /mnt/etc/fstab
 
 # chroot into system
 arch-chroot /mnt bash
+
+# configure fstab
+vim /etc/fstab
+# change any mentions to "realatime" to "noatime" and change the values of fmask and dmask to "fmask=0137,dmask=0027"
+# the first change will lower writes to the disk at the expense of breakage of very few applications, like neomutt
+# the second change is a hardening tweak that will make the /efi directory accessible only to the root user
 
 # configure clock
 ln -sf /usr/share/zoneinfo/Region/City /etc/localtime
