@@ -170,6 +170,14 @@ vim /etc/X11/xorg.conf.d/00-keyboard.conf
 		Option "XkbVariant" "abnt2"
 	EndSection
 
+## YOU HAVE TO RE-SIGN ALL SIGNED ENTRIES AFTER BOOTCTL GETS REINSTALLED ##
+
+# configure fstab
+vim /etc/fstab
+# change any mentions to "realatime" to "noatime" and change the values of fmask and dmask to "fmask=0137,dmask=0027"
+# the first change will lower writes to the disk at the expense of breakage of very few applications, like neomutt
+# the second change is a hardening tweak that will make the /efi directory accessible only to the root user
+
 # make bootctl entry again
 bootctl install --esp-path=/efi
 
@@ -181,16 +189,10 @@ sbctl sign -s /efi/EFI/Linux/arch-linux-zen.efi
 sbctl sign -s /efi/EFI/Linux/arch-linux-zen-fallback.efi
 sbctl sign -s /efi/EFI/BOOT/BOOTX64.EFI
 sbctl sign -s /efi/EFI/systemd/systemd-bootx64.efi
+# verify if everything needed is signed
+sbctl verify
 # make mkinitcpio and bootctl
 mkinitcpio -P
-
-## YOU HAVE TO RE-SIGN ALL SIGNED ENTRIES AFTER BOOTCTL GETS REINSTALLED ##
-
-# configure fstab
-vim /etc/fstab
-# change any mentions to "realatime" to "noatime" and change the values of fmask and dmask to "fmask=0137,dmask=0027"
-# the first change will lower writes to the disk at the expense of breakage of very few applications, like neomutt
-# the second change is a hardening tweak that will make the /efi directory accessible only to the root user
 
 # link systemd-resolved to resolv.conf
 rm /etc/resolv.conf
